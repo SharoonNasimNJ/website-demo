@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CI/CD Workshop Manual — Deploy a Website with GitHub Actions</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --heading: #f0f6fc;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --success: #3fb950;
+    --warning: #d29922;
+    --danger: #f85149;
+    --code-bg: #1f2428;
+    --sidebar-w: 280px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+
+  /* Layout */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: fixed;
+    top: 0; bottom: 0; left: 0;
+    overflow-y: auto;
+  }
+  .sidebar h2 {
+    color: var(--heading);
+    padding: 0 24px 16px;
+    font-size: 1.1em;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar a {
+    display: block;
+    padding: 8px 24px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.92em;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar a:hover {
+    background: var(--bg);
+    border-left-color: var(--accent);
+    color: var(--accent);
+  }
+  .sidebar .section-title {
+    padding: 12px 24px 6px;
+    color: var(--muted);
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Main content */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    padding: 40px 60px;
+    max-width: 1000px;
+  }
+
+  h1 {
+    color: var(--heading);
+    font-size: 2.4em;
+    margin-bottom: 12px;
+    line-height: 1.2;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 1.15em;
+    margin-bottom: 32px;
+  }
+
+  h2 {
+    color: var(--heading);
+    font-size: 1.75em;
+    margin: 48px 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  h3 {
+    color: var(--heading);
+    font-size: 1.25em;
+    margin: 32px 0 12px;
+  }
+
+  h4 {
+    color: var(--heading);
+    font-size: 1.05em;
+    margin: 24px 0 8px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  ul, ol { margin: 12px 0 16px 24px; }
+  li { margin-bottom: 6px; }
+
+  a { color: var(--accent); }
+
+  strong { color: var(--heading); }
+
+  /* Code blocks */
+  .code-block {
+    position: relative;
+    margin: 16px 0;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #161b22;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8em;
+    color: var(--muted);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+  .code-header .filename {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .copy-btn {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .copy-btn.copied {
+    background: var(--success);
+    color: #fff;
+    border-color: var(--success);
+  }
+  pre {
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 0.88em;
+    line-height: 1.55;
+  }
+  code {
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+  p code, li code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.88em;
+    color: #ff7b72;
+  }
+
+  /* Callouts */
+  .callout {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+    border-left: 4px solid;
+  }
+  .callout-info {
+    background: rgba(88, 166, 255, 0.1);
+    border-color: var(--accent);
+  }
+  .callout-warn {
+    background: rgba(210, 153, 34, 0.1);
+    border-color: var(--warning);
+  }
+  .callout-danger {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--danger);
+  }
+  .callout-success {
+    background: rgba(63, 185, 80, 0.1);
+    border-color: var(--success);
+  }
+  .callout-title {
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.92em;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+  }
+  th {
+    background: var(--card);
+    color: var(--heading);
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-easy { background: rgba(63,185,80,0.2); color: var(--success); }
+  .badge-med { background: rgba(210,153,34,0.2); color: var(--warning); }
+  .badge-hard { background: rgba(248,81,73,0.2); color: var(--danger); }
+
+  /* Steps */
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-weight: 700;
+    margin-right: 10px;
+    font-size: 0.9em;
+  }
+
+  /* Checklist */
+  .checklist {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .checklist label {
+    display: block;
+    padding: 6px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .checklist input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.15);
+    cursor: pointer;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w);
+    right: 0;
+    height: 3px;
+    background: transparent;
+    z-index: 100;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    .sidebar {
+      position: relative;
+      width: 100%;
+      height: auto;
+    }
+    .main {
+      margin-left: 0;
+      padding: 24px;
+    }
+    .layout { flex-direction: column; }
+    .progress { left: 0; }
+  }
+
+  /* Print */
+  @media print {
+    .sidebar, .progress, .copy-btn { display: none; }
+    .main { margin-left: 0; padding: 0; }
+    body { background: #fff; color: #000; }
+    pre { background: #f5f5f5; }
+  }
+
+  /* Anchor offset */
+  section { scroll-margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="layout">
+
+  <!-- ============ SIDEBAR ============ -->
+  <nav class="sidebar">
+    <h2>📘 Workshop Manual</h2>
+
+    <div class="section-title">Getting Started</div>
+    <a href="#overview">Overview</a>
+    <a href="#prereq">Prerequisites</a>
+    <a href="#bigpicture">The Big Picture</a>
+
+    <div class="section-title">Part 1 — Setup</div>
+    <a href="#part1">Create Repository</a>
+    <a href="#clone">Clone Locally</a>
+    <a href="#git-config">Configure Git</a>
+
+    <div class="section-title">Part 2 — Build</div>
+    <a href="#part2">Create Website Files</a>
+    <a href="#html">index.html</a>
+    <a href="#css">style.css</a>
+    <a href="#js">script.js</a>
+    <a href="#preview">Preview Locally</a>
+
+    <div class="section-title">Part 3 — Push</div>
+    <a href="#gitignore">.gitignore</a>
+    <a href="#first-push">First Push</a>
+
+    <div class="section-title">Part 4 — CI/CD</div>
+    <a href="#enable-pages">Enable Pages</a>
+    <a href="#workflow">Create Workflow</a>
+    <a href="#yaml-explained">Workflow Explained</a>
+    <a href="#push-workflow">Push Workflow</a>
+
+    <div class="section-title">Part 5 — Live</div>
+    <a href="#see-live">See Live Site</a>
+    <a href="#test-pipeline">Test Pipeline</a>
+    <a href="#break-it">Break It On Purpose</a>
+
+    <div class="section-title">Reference</div>
+    <a href="#commands">Command Cheatsheet</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <a href="#checklist-final">Completion Checklist</a>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <h1>CI/CD Workshop Manual</h1>
+    <p class="subtitle">Build a personal website and deploy it automatically with GitHub Actions.</p>
+
+    <!-- ==================== OVERVIEW ==================== -->
+    <section id="overview">
+      <h2>🎯 Overview</h2>
+      <p>In this workshop, you will:</p>
+      <ul>
+        <li>Build a simple personal website (HTML, CSS, JavaScript)</li>
+        <li>Push it to GitHub</li>
+        <li>Write a CI/CD pipeline using GitHub Actions</li>
+        <li>Watch it automatically test, build, and deploy to a live URL</li>
+      </ul>
+
+      <p><strong>By the end, you'll have:</strong></p>
+      <ul>
+        <li>A live website at <code>https://YOUR-USERNAME.github.io/website-demo/</code></li>
+        <li>A working CI/CD pipeline triggered on every push</li>
+        <li>Real experience with the tools professional developers use</li>
+      </ul>
+
+      <div class="callout callout-info">
+        <span class="callout-title">💡 What is CI/CD?</span>
+        <strong>CI (Continuous Integration)</strong> = Every time you push code, tests run automatically.<br>
+        <strong>CD (Continuous Deployment)</strong> = If tests pass, your code is deployed automatically.
+      </div>
+    </section>
+
+    <!-- ==================== PREREQUISITES ==================== -->
+    <section id="prereq">
+      <h2>📋 Prerequisites</h2>
+      <p>Before starting, make sure you have:</p>
+      <table>
+        <tr><th>Tool</th><th>Why</th><th>Check</th></tr>
+        <tr><td>GitHub account</td><td>Host code + run pipelines</td><td>Visit <a href="https://github.com" target="_blank">github.com</a></td></tr>
+        <tr><td>Git installed</td><td>Version control</td><td><code>git --version</code></td></tr>
+        <tr><td>Python 3</td><td>Local web server</td><td><code>python3 --version</code></td></tr>
+        <tr><td>Text editor</td><td>Write code</td><td>VS Code, nano, or Notepad</td></tr>
+        <tr><td>Terminal</td><td>Run commands</td><td>Terminal (Mac/Linux) or PowerShell (Windows)</td></tr>
+      </table>
+
+      <div class="callout callout-warn">
+        <span class="callout-title">⚠️ Important</span>
+        Your GitHub repository must be <strong>public</strong> for free GitHub Pages. Private repos require a paid plan.
+      </div>
+    </section>
+
+    <!-- ==================== BIG PICTURE ==================== -->
+    <section id="bigpicture">
+      <h2>🗺️ The Big Picture</h2>
+      <p>Here's what we're building:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Flow Diagram</span></div>
+<pre>┌──────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│  You write   │─────▶│  git push    │─────▶│  GitHub      │─────▶│  Live site   │
+│  HTML/CSS/JS │      │  to GitHub   │      │  Actions     │      │  on github.  │
+│              │      │              │      │  pipeline    │      │  io URL      │
+└──────────────┘      └──────────────┘      └──────┬───────┘      └──────────────┘
+                                                    │
+                                                    ▼
+                                         ┌─────────────────────┐
+                                         │  1. TEST            │
+                                         │  2. BUILD           │
+                                         │  3. DEPLOY          │
+                                         └─────────────────────┘</pre>
+      </div>
+      <p>Every push triggers: <strong>Test → Build → Deploy</strong>.</p>
+    </section>
+
+    <!-- ==================== PART 1 ==================== -->
+    <section id="part1">
+      <h2>🚀 Part 1: Setup</h2>
+
+      <h3 id="clone"><span class="step-num">1</span>Create a Repository on GitHub</h3>
+      <ol>
+        <li>Go to <a href="https://github.com/new" target="_blank">github.com/new</a></li>
+        <li>Repository name: <code>website-demo</code></li>
+        <li>Description: <code>My personal website with CI/CD</code></li>
+        <li>Visibility: <strong>Public</strong></li>
+        <li>Check ✅ <strong>Add a README file</strong></li>
+        <li>Click <strong>"Create repository"</strong></li>
+      </ol>
+
+      <h3><span class="step-num">2</span>Clone It Locally</h3>
+      <p>Open your terminal and run:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>cd ~/Desktop
+git clone https://github.com/YOUR-USERNAME/website-demo.git
+cd website-demo</pre>
+      </div>
+      <p>Replace <code>YOUR-USERNAME</code> with your actual GitHub username.</p>
+      <p><strong>Purpose:</strong> <code>git clone</code> downloads the repo to your computer so you can edit it locally.</p>
+
+      <h3 id="git-config"><span class="step-num">3</span>Configure Git (One-Time)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>git config --global user.name "Your Name"
+git config --global user.email "your-email@example.com"</pre>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-title">⚠️ Use your GitHub email</span>
+        The email must match an email on your GitHub account. Find it at
+        <a href="https://github.com/settings/emails" target="_blank">github.com/settings/emails</a>.
+        Otherwise, your commits won't appear on your profile.
+      </div>
+
+      <p><strong>Verify:</strong></p>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>git config --list</pre>
+      </div>
+    </section>
+
+    <!-- ==================== PART 2 ==================== -->
+    <section id="part2">
+      <h2>🏗️ Part 2: Build the Website</h2>
+
+      <h3><span class="step-num">1</span>Create the Folder Structure</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>mkdir -p src</pre>
+      </div>
+      <p>We put all website files in <code>src/</code> to keep them separate from configuration.</p>
+
+      <h3 id="html"><span class="step-num">2</span>Create <code>src/index.html</code></h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>nano src/index.html</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="filename">src/index.html</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;My Personal Website&lt;/title&gt;
+    &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;header&gt;
+        &lt;h1&gt;👋 Hi, I'm &lt;span id="name"&gt;Your Name&lt;/span&gt;&lt;/h1&gt;
+        &lt;p class="tagline"&gt;Developer | Learner | Builder&lt;/p&gt;
+    &lt;/header&gt;
+
+    &lt;main&gt;
+        &lt;section class="about"&gt;
+            &lt;h2&gt;About Me&lt;/h2&gt;
+            &lt;p&gt;
+                I'm learning CI/CD with GitHub Actions. This website was
+                automatically deployed by a pipeline I built!
+            &lt;/p&gt;
+        &lt;/section&gt;
+
+        &lt;section class="projects"&gt;
+            &lt;h2&gt;Projects&lt;/h2&gt;
+            &lt;ul&gt;
+                &lt;li&gt;🐍 Python Calculator&lt;/li&gt;
+                &lt;li&gt;🌐 This Website&lt;/li&gt;
+                &lt;li&gt;⚙️ CI/CD Pipelines&lt;/li&gt;
+            &lt;/ul&gt;
+        &lt;/section&gt;
+
+        &lt;section class="contact"&gt;
+            &lt;h2&gt;Contact&lt;/h2&gt;
+            &lt;p&gt;
+                Find me on
+                &lt;a href="https://github.com/YOUR-USERNAME" target="_blank"&gt;GitHub&lt;/a&gt;
+            &lt;/p&gt;
+        &lt;/section&gt;
+    &lt;/main&gt;
+
+    &lt;footer&gt;
+        &lt;p&gt;© &lt;span id="year"&gt;&lt;/span&gt; Your Name — Deployed via GitHub Actions&lt;/p&gt;
+    &lt;/footer&gt;
+
+    &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+      </div>
+      <p><strong>Customize:</strong> Replace <code>Your Name</code> and <code>YOUR-USERNAME</code>.</p>
+      <p>Save and exit: <code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code>.</p>
+
+      <h3 id="css"><span class="step-num">3</span>Create <code>src/style.css</code></h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>nano src/style.css</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="filename">src/style.css</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+header, main, footer {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    text-align: center;
+}
+
+h1 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.tagline {
+    color: #666;
+    font-size: 1.1em;
+}
+
+h2 {
+    color: #764ba2;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 8px;
+}
+
+section {
+    margin-bottom: 30px;
+}
+
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+ul li {
+    padding: 8px 0;
+    font-size: 1.1em;
+}
+
+a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+footer {
+    text-align: center;
+    color: #666;
+    font-size: 0.9em;
+}</pre>
+      </div>
+
+      <h3 id="js"><span class="step-num">4</span>Create <code>src/script.js</code></h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>nano src/script.js</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="filename">src/script.js</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>// Set the current year in the footer
+document.getElementById('year').textContent = new Date().getFullYear();
+
+// Log a message to confirm the script loaded
+console.log('✅ Website loaded successfully!');
+
+// Add a subtle animation to the header on load
+window.addEventListener('load', () => {
+    const header = document.querySelector('header');
+    header.style.opacity = '0';
+    header.style.transition = 'opacity 1s';
+    setTimeout(() => {
+        header.style.opacity = '1';
+    }, 100);
+});</pre>
+      </div>
+
+      <h3 id="preview"><span class="step-num">5</span>Preview Locally</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>cd src
+python3 -m http.server 8000</pre>
+      </div>
+      <p>Open <a href="http://localhost:8000" target="_blank">http://localhost:8000</a> in your browser.</p>
+      <p>Press <code>Ctrl+C</code> in the terminal to stop the server.</p>
+    </section>
+
+    <!-- ==================== PART 3 ==================== -->
+    <section id="part3">
+      <h2>📤 Part 3: Push to GitHub</h2>
+
+      <h3 id="gitignore"><span class="step-num">1</span>Create <code>.gitignore</code></h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>cd ..
+nano .gitignore</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="filename">.gitignore</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+__pycache__/
+*.pyc
+node_modules/
+dist/</pre>
+      </div>
+      <p><strong>Purpose:</strong> Tells Git which files to ignore (OS junk, editor configs, build output).</p>
+
+      <h3 id="first-push"><span class="step-num">2</span>Stage, Commit, Push</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>git add .
+git commit -m "Initial commit: add personal website"
+git push origin main</pre>
+      </div>
+
+      <p><strong>What each command does:</strong></p>
+      <table>
+        <tr><th>Command</th><th>Purpose</th></tr>
+        <tr><td><code>git add .</code></td><td>Stage all changes</td></tr>
+        <tr><td><code>git commit -m "..."</code></td><td>Save a snapshot with a message</td></tr>
+        <tr><td><code>git push origin main</code></td><td>Upload to GitHub</td></tr>
+      </table>
+
+      <p>Refresh your GitHub repo page — you should see <code>src/</code> folder and files.</p>
+    </section>
+
+    <!-- ==================== PART 4 ==================== -->
+    <section id="part4">
+      <h2>⚙️ Part 4: Create the CI/CD Pipeline</h2>
+
+      <h3 id="enable-pages"><span class="step-num">1</span>Enable GitHub Pages (Critical!)</h3>
+      <div class="callout callout-danger">
+        <span class="callout-title">🚨 Do this BEFORE running the workflow</span>
+        If you skip this, your deploy job will fail with <code>"Get Pages site failed. Not Found"</code>.
+      </div>
+
+      <ol>
+        <li>Go to your repository on GitHub</li>
+        <li>Click <strong>Settings</strong> (top menu)</li>
+        <li>Left sidebar → <strong>Pages</strong></li>
+        <li>Under <strong>Build and deployment</strong> → <strong>Source</strong>: choose <strong>"GitHub Actions"</strong></li>
+        <li>No branch selection needed — just pick "GitHub Actions" from the dropdown</li>
+      </ol>
+
+      <div class="callout callout-info">
+        <span class="callout-title">💡 Why this step?</span>
+        GitHub Pages has two modes: "Deploy from a branch" (legacy) and "GitHub Actions" (modern).
+        Our workflow uses the modern mode. Without selecting it, GitHub doesn't know to expect a workflow deployment.
+      </div>
+
+      <h3 id="workflow"><span class="step-num">2</span>Create the Workflow File</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>mkdir -p .github/workflows
+nano .github/workflows/deploy.yml</pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="filename">.github/workflows/deploy.yml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>name: 🚀 Build and Deploy Website
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # ══════════════════════════════════════════════
+  # JOB 1: TEST — Validate the website
+  # ══════════════════════════════════════════════
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ✅ Verify required files exist
+        run: |
+          echo "Checking for required files..."
+          test -f src/index.html || (echo "❌ src/index.html missing" && exit 1)
+          test -f src/style.css  || (echo "❌ src/style.css missing" && exit 1)
+          test -f src/script.js  || (echo "❌ src/script.js missing" && exit 1)
+          echo "✅ All required files present!"
+
+      - name: 🔍 Validate HTML structure
+        run: |
+          echo "Validating HTML..."
+          grep -q "<!DOCTYPE html>" src/index.html || (echo "❌ Missing DOCTYPE" && exit 1)
+          grep -q "<html" src/index.html     || (echo "❌ Missing <html> tag" && exit 1)
+          grep -q "<head>" src/index.html    || (echo "❌ Missing <head>" && exit 1)
+          grep -q "<body>" src/index.html    || (echo "❌ Missing <body>" && exit 1)
+          echo "✅ HTML structure is valid!"
+
+  # ══════════════════════════════════════════════
+  # JOB 2: BUILD — Package the site
+  # ══════════════════════════════════════════════
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📁 Create build directory
+        run: |
+          mkdir -p dist
+          cp -r src/* dist/
+          echo "Build complete!"
+
+      - name: 📝 Add build info file
+        run: |
+          echo "Build Date: $(date -u)" > dist/build-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> dist/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> dist/build-info.txt
+          echo "Triggered by: ${{ github.actor }}" >> dist/build-info.txt
+
+      - name: 📤 Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-build
+          path: dist/
+          retention-days: 7
+
+  # ══════════════════════════════════════════════
+  # JOB 3: DEPLOY — Publish to GitHub Pages
+  # ══════════════════════════════════════════════
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📁 Prepare site files
+        run: |
+          mkdir -p _site
+          cp -r src/* _site/
+          echo "Site ready for deployment"
+
+      - name: 🔧 Configure GitHub Pages
+       
