@@ -1,0 +1,117 @@
+name: 🚀 Build and Deploy Website
+
+# When does this run?
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:   # Allows manual trigger from GitHub UI
+
+# Permissions the workflow needs
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Prevent concurrent deploys from clobbering each other
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # ══════════════════════════════════════════════
+  # JOB 1: TEST — Validate the website
+  # ══════════════════════════════════════════════
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ✅ Verify required files exist
+        run: |
+          echo "Checking for required files..."
+          test -f src/index.html || (echo "❌ src/index.html missing" && exit 1)
+          test -f src/style.css  || (echo "❌ src/style.css missing" && exit 1)
+          test -f src/script.js  || (echo "❌ src/script.js missing" && exit 1)
+          echo "✅ All required files present!"
+
+      - name: 🔍 Validate HTML structure
+        run: |
+          echo "Validating HTML..."
+          grep -q "<!DOCTYPE html>" src/index.html || (echo "❌ Missing DOCTYPE" && exit 1)
+          grep -q "<html" src/index.html     || (echo "❌ Missing <html> tag" && exit 1)
+          grep -q "<head>" src/index.html    || (echo "❌ Missing <head>" && exit 1)
+          grep -q "<body>" src/index.html    || (echo "❌ Missing <body>" && exit 1)
+          echo "✅ HTML structure is valid!"
+
+      - name: 📊 Report file sizes
+        run: |
+          echo "📦 File sizes:"
+          ls -lh src/
+
+  # ══════════════════════════════════════════════
+  # JOB 2: BUILD — Package the site
+  # ══════════════════════════════════════════════
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📁 Create build directory
+        run: |
+          mkdir -p dist
+          cp -r src/* dist/
+          echo "Build complete!"
+
+      - name: 📝 Add build info file
+        run: |
+          echo "Build Date: $(date -u)" > dist/build-info.txt
+          echo "Commit SHA: ${{ github.sha }}" >> dist/build-info.txt
+          echo "Branch: ${{ github.ref_name }}" >> dist/build-info.txt
+          echo "Triggered by: ${{ github.actor }}" >> dist/build-info.txt
+
+      - name: 📤 Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-build
+          path: dist/
+          retention-days: 7
+
+  # ══════════════════════════════════════════════
+  # JOB 3: DEPLOY — Publish to GitHub Pages
+  # ══════════════════════════════════════════════
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📁 Prepare site files
+        run: |
+          mkdir -p _site
+          cp -r src/* _site/
+          echo "Site ready for deployment"
+
+      - name: 🔧 Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 📤 Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: 🌐 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
