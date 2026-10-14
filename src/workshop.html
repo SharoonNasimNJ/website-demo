@@ -863,4 +863,518 @@ jobs:
           echo "Site ready for deployment"
 
       - name: 🔧 Configure GitHub Pages
+      uses: actions/configure-pages@v5
+
+      - name: 📤 Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: 🌐 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- WORKFLOW YAML EXPLAINED                                  -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<section id="yaml-explained">
+  <h2>🔍 The Workflow YAML — Every Line Explained</h2>
+  
+  <p>
+    This is the most important file in your CI/CD pipeline. Every line has a purpose.
+    Let's break it down piece by piece.
+  </p>
+
+  <!-- ========== WORKFLOW NAME ========== -->
+  <h3>📌 Section 1: Workflow Name</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Line 1</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>name: 🚀 Build and Deploy Website</pre>
+  </div>
+
+  <table>
+    <tr><th>Part</th><th>Meaning</th></tr>
+    <tr><td><code>name:</code></td><td>The YAML key for the workflow's display name</td></tr>
+    <tr><td><code>🚀 Build and Deploy Website</code></td><td>What appears in the <strong>Actions</strong> tab on GitHub</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-title">💡 Where you see it</span>
+    Go to your repo → <strong>Actions</strong> tab → left sidebar shows this name.
+    Optional, but <strong>always include it</strong> — otherwise GitHub shows the filename instead.
+  </div>
+
+  <!-- ========== TRIGGERS ========== -->
+  <h3>📌 Section 2: Triggers — When Does It Run?</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 3-9</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre># When does this run?
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:   # Allows manual trigger from GitHub UI</pre>
+  </div>
+
+  <p>This is the <strong>most important section</strong> — it defines <strong>when</strong> the workflow runs.</p>
+
+  <table>
+    <tr><th>Line</th><th>Code</th><th>Meaning</th></tr>
+    <tr><td>3</td><td><code># When does this run?</code></td><td>A comment — YAML ignores everything after <code>#</code></td></tr>
+    <tr><td>4</td><td><code>on:</code></td><td>Start of trigger list</td></tr>
+    <tr><td>5</td><td><code>push:</code></td><td>Trigger when code is pushed</td></tr>
+    <tr><td>6</td><td><code>branches: [ main ]</code></td><td>Only for the <code>main</code> branch</td></tr>
+    <tr><td>7</td><td><code>pull_request:</code></td><td>Trigger on PRs targeting...</td></tr>
+    <tr><td>8</td><td><code>branches: [ main ]</code></td><td>...the <code>main</code> branch</td></tr>
+    <tr><td>9</td><td><code>workflow_dispatch:</code></td><td>Adds a manual "Run workflow" button</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-title">💡 Push vs Pull Request</span>
+    <strong>push</strong> = "someone pushed code"<br>
+    <strong>pull_request</strong> = "someone opened/updated a PR"<br>
+    Both can trigger on the same commit — they're separate events.
+  </div>
+
+  <!-- ========== PERMISSIONS ========== -->
+  <h3>📌 Section 3: Permissions</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 11-15</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre># Permissions the workflow needs
+permissions:
+  contents: read
+  pages: write
+  id-token: write</pre>
+  </div>
+
+  <p>By default, GitHub Actions workflows get a <strong>read-only token</strong> for security. If your workflow needs to write anything, you must explicitly grant it.</p>
+
+  <table>
+    <tr><th>Permission</th><th>Why It's Needed</th></tr>
+    <tr><td><code>contents: read</code></td><td>Read repo files (for <code>actions/checkout</code>)</td></tr>
+    <tr><td><code>pages: write</code></td><td>Publish to GitHub Pages</td></tr>
+    <tr><td><code>id-token: write</code></td><td>Authenticate via OIDC (GitHub's digital ID card)</td></tr>
+  </table>
+
+  <div class="callout callout-danger">
+    <span class="callout-title">🚨 Without this block</span>
+    Your deploy job fails with <code>"Resource not accessible by integration"</code>.
+    This is the #1 cause of deploy failures.
+  </div>
+
+  <!-- ========== CONCURRENCY ========== -->
+  <h3>📌 Section 4: Concurrency — Preventing Collisions</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 17-20</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre># Prevent concurrent deploys from clobbering each other
+concurrency:
+  group: "pages"
+  cancel-in-progress: false</pre>
+  </div>
+
+  <p>If you push 3 times in 30 seconds, 3 workflows start. Concurrency control prevents them from deploying simultaneously.</p>
+
+  <table>
+    <tr><th>Line</th><th>Code</th><th>Meaning</th></tr>
+    <tr><td>18</td><td><code>concurrency:</code></td><td>Start of concurrency settings</td></tr>
+    <tr><td>19</td><td><code>group: "pages"</code></td><td>Name of the queue — all workflows with this name share it</td></tr>
+    <tr><td>20</td><td><code>cancel-in-progress: false</code></td><td>Queue new runs instead of canceling old ones</td></tr>
+  </table>
+
+  <div class="callout callout-warn">
+    <span class="callout-title">⚠️ Why <code>false</code> here?</span>
+    Deploys are irreversible. Canceling mid-deploy can leave a half-deployed site.
+    For test-only workflows, use <code>true</code> — no harm in canceling tests.
+  </div>
+
+  <!-- ========== JOBS OVERVIEW ========== -->
+  <h3>📌 Section 5: The Three Jobs</h3>
+  
+  <p>Our workflow has <strong>three jobs</strong>, running in sequence:</p>
+
+  <table>
+    <tr><th>Job</th><th>Purpose</th><th>Runs If</th></tr>
+    <tr><td><strong>test</strong></td><td>Validate files and HTML</td><td>Always (on trigger)</td></tr>
+    <tr><td><strong>build</strong></td><td>Package for deploy</td><td>Test passed</td></tr>
+    <tr><td><strong>deploy</strong></td><td>Publish to GitHub Pages</td><td>Build passed AND on main branch</td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <span class="callout-title">💡 Key concept</span>
+    Each job runs on its own <strong>fresh virtual machine</strong>. Files don't carry over unless explicitly uploaded/downloaded.
+  </div>
+
+  <!-- ========== JOB 1: TEST ========== -->
+  <h3>🔷 Job 1: Test</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 23-50</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>test:
+  name: 🧪 Test
+  runs-on: ubuntu-latest
+  steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ✅ Verify required files exist
+      run: |
+        echo "Checking for required files..."
+        test -f src/index.html || (echo "❌ src/index.html missing" && exit 1)
+        test -f src/style.css  || (echo "❌ src/style.css missing" && exit 1)
+        test -f src/script.js  || (echo "❌ src/script.js missing" && exit 1)
+        echo "✅ All required files present!"</pre>
+  </div>
+
+  <h4>Line-by-Line Explanation</h4>
+  
+  <table>
+    <tr><th>Line</th><th>Code</th><th>Meaning</th></tr>
+    <tr><td>23</td><td><code>test:</code></td><td>Job ID — unique name for referencing this job</td></tr>
+    <tr><td>24</td><td><code>name: 🧪 Test</code></td><td>Display name in the UI</td></tr>
+    <tr><td>25</td><td><code>runs-on: ubuntu-latest</code></td><td>OS for the runner VM (Linux, cheapest, fastest)</td></tr>
+    <tr><td>26</td><td><code>steps:</code></td><td>List of tasks in this job</td></tr>
+    <tr><td>27-28</td><td><code>- name: ... uses: actions/checkout@v4</code></td><td>First step — clones your repo onto the VM</td></tr>
+    <tr><td>30-36</td><td><code>- name: ... run: |</code></td><td>Second step — check files exist</td></tr>
+  </table>
+
+  <h4>Understanding the shell logic</h4>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Breaking down one line</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>test -f src/index.html || (echo "❌ missing" && exit 1)</pre>
+  </div>
+
+  <p>This uses bash's <strong>logical operators</strong>:</p>
+  <ul>
+    <li><code>test -f src/index.html</code> → returns 0 if the file exists, 1 if not</li>
+    <li><code>||</code> → "OR" — run next command only if first one <strong>failed</strong></li>
+    <li><code>(echo "❌ missing" && exit 1)</code> → print error AND exit with failure code</li>
+  </ul>
+
+  <p><strong>Result:</strong> If the file exists → skip the error, continue. If missing → print error and fail the job.</p>
+
+  <div class="callout callout-info">
+    <span class="callout-title">💡 The <code>|</code> pipe character</span>
+    It tells YAML: "Everything indented below is one multi-line string."
+    Without it, you'd need to write commands on one line.
+  </div>
+
+  <h4>Validate HTML Step</h4>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">HTML validation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>- name: 🔍 Validate HTML structure
+  run: |
+    grep -q "<!DOCTYPE html>" src/index.html || (echo "❌ Missing DOCTYPE" && exit 1)
+    grep -q "<html" src/index.html     || (echo "❌ Missing <html> tag" && exit 1)
+    grep -q "<head>" src/index.html    || (echo "❌ Missing <head>" && exit 1)
+    grep -q "<body>" src/index.html    || (echo "❌ Missing <body>" && exit 1)</pre>
+  </div>
+
+  <table>
+    <tr><th>Flag</th><th>Meaning</th></tr>
+    <tr><td><code>grep</code></td><td>Search for a pattern in a file</td></tr>
+    <tr><td><code>-q</code></td><td>Quiet mode — no output, just exit code (0 if found, 1 if not)</td></tr>
+  </table>
+
+  <p><strong>Why this matters:</strong> Catches corrupted or truncated HTML files before they deploy.</p>
+
+  <!-- ========== JOB 2: BUILD ========== -->
+  <h3>🔷 Job 2: Build</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 52-78</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>build:
+  name: 🏗️ Build
+  runs-on: ubuntu-latest
+  needs: test          # ← Runs only if test passed
+  steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📁 Create build directory
+      run: |
+        mkdir -p dist
+        cp -r src/* dist/
+
+    - name: 📝 Add build info file
+      run: |
+        echo "Build Date: $(date -u)" > dist/build-info.txt
+        echo "Commit SHA: ${{ github.sha }}" >> dist/build-info.txt
+        echo "Branch: ${{ github.ref_name }}" >> dist/build-info.txt
+        echo "Triggered by: ${{ github.actor }}" >> dist/build-info.txt
+
+    - name: 📤 Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: website-build
+        path: dist/
+        retention-days: 7</pre>
+  </div>
+
+  <h4>The Most Important Line</h4>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Line 55</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>needs: test</pre>
+  </div>
+
+  <p><strong>What it does:</strong> This job only runs if <code>test</code> succeeds. If test fails, build is <strong>skipped</strong> (never starts).</p>
+
+  <p><strong>Why this matters:</strong> Prevents building broken code.</p>
+
+  <h4>Understanding <code>&gt;</code> vs <code>&gt;&gt;</code></h4>
+  
+  <table>
+    <tr><th>Operator</th><th>Meaning</th></tr>
+    <tr><td><code>&gt;</code></td><td><strong>Overwrite</strong> the file (creates if doesn't exist)</td></tr>
+    <tr><td><code>&gt;&gt;</code></td><td><strong>Append</strong> to the file (adds to end)</td></tr>
+  </table>
+
+  <h4>GitHub Context Expressions</h4>
+  
+  <p>The <code>${{ }}</code> syntax accesses GitHub's built-in variables:</p>
+
+  <table>
+    <tr><th>Expression</th><th>What It Gives You</th></tr>
+    <tr><td><code>${{ github.sha }}</code></td><td>Full commit SHA (e.g., <code>a1b2c3d4...</code>)</td></tr>
+    <tr><td><code>${{ github.ref_name }}</code></td><td>Branch or tag name (e.g., <code>main</code>)</td></tr>
+    <tr><td><code>${{ github.actor }}</code></td><td>Username who triggered the workflow</td></tr>
+    <tr><td><code>${{ github.event_name }}</code></td><td>Event type (<code>push</code>, <code>pull_request</code>)</td></tr>
+  </table>
+
+  <h4>What's an Artifact?</h4>
+  
+  <p>Files produced by the workflow that you can <strong>download later</strong> from the Actions tab.</p>
+
+  <p><strong>Where to find them:</strong> Repo → Actions → workflow run → scroll down → <strong>Artifacts</strong> section.</p>
+
+  <!-- ========== JOB 3: DEPLOY ========== -->
+  <h3>🔷 Job 3: Deploy</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Lines 80-108</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>deploy:
+  name: 🚀 Deploy
+  runs-on: ubuntu-latest
+  needs: build
+  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  environment:
+    name: github-pages
+    url: ${{ steps.deployment.outputs.page_url }}
+  steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📁 Prepare site files
+      run: |
+        mkdir -p _site
+        cp -r src/* _site/
+
+    - name: 🔧 Configure GitHub Pages
+      uses: actions/configure-pages@v5
+
+    - name: 📤 Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: _site
+
+    - name: 🌐 Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4</pre>
+  </div>
+
+  <h4>The Safety Guard — Line 84</h4>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Line 84</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>if: github.ref == 'refs/heads/main' && github.event_name == 'push'</pre>
+  </div>
+
+  <p>Breaking it down:</p>
+  <ul>
+    <li><code>github.ref == 'refs/heads/main'</code> → Is this a push to <code>main</code>?</li>
+    <li><code>&&</code> → AND</li>
+    <li><code>github.event_name == 'push'</code> → Is this event a push?</li>
+  </ul>
+
+  <p><strong>Why both conditions:</strong> PRs would also match <code>main</code> in some cases — we don't want to deploy unmerged code.</p>
+
+  <div class="callout callout-danger">
+    <span class="callout-title">🚨 Rule of thumb</span>
+    <strong>Deploy jobs always need <code>if:</code> guards.</strong> Never let them run on PRs.
+  </div>
+
+  <h4>What's an "Environment"?</h4>
+  
+  <table>
+    <tr><th>Line</th><th>Meaning</th></tr>
+    <tr><td><code>environment:</code></td><td>Names a deployment target (like "production")</td></tr>
+    <tr><td><code>name: github-pages</code></td><td>The special GitHub Pages environment</td></tr>
+    <tr><td><code>url: ...</code></td><td>The URL that appears in the deployment summary</td></tr>
+  </table>
+
+  <h4>The Deploy Steps Explained</h4>
+  
+  <table>
+    <tr><th>Step</th><th>What It Does</th></tr>
+    <tr><td><strong>Checkout</strong></td><td>Get code onto the VM</td></tr>
+    <tr><td><strong>Prepare <code>_site/</code></strong></td><td>Copy files into a deploy-ready folder</td></tr>
+    <tr><td><strong>Configure Pages</strong></td><td>Verify Pages is enabled, set up environment</td></tr>
+    <tr><td><strong>Upload Pages artifact</strong></td><td>Package <code>_site/</code> in Pages format</td></tr>
+    <tr><td><strong>Deploy</strong></td><td>Publish to GitHub's CDN</td></tr>
+  </table>
+
+  <h4>Understanding <code>id: deployment</code></h4>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Line 107</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>id: deployment</pre>
+  </div>
+
+  <p>Gives this step a reference name so other parts of the file can access its <strong>outputs</strong>.</p>
+
+  <p>Line 87 uses it:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Line 87</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre>url: ${{ steps.deployment.outputs.page_url }}</pre>
+  </div>
+
+  <!-- ========== MENTAL MODEL ========== -->
+  <h3>🧠 Mental Model — How It All Fits Together</h3>
+  
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Flow Diagram</span></div>
+<pre>EVENT (push to main)
+  ↓
+WORKFLOW STARTS
+  ↓
+┌─────────────────────┐
+│  TEST JOB           │  Fresh Ubuntu VM #1
+│  ✓ Checkout         │
+│  ✓ Files exist      │
+│  ✓ HTML valid       │
+└──────────┬──────────┘
+           │ (only if test passed)
+           ▼
+┌─────────────────────┐
+│  BUILD JOB          │  Fresh Ubuntu VM #2
+│  needs: test        │
+│  ✓ Checkout         │
+│  ✓ Copy to dist/    │
+│  ✓ Upload artifact  │
+└──────────┬──────────┘
+           │ (only if build passed)
+           ▼
+┌─────────────────────┐
+│  DEPLOY JOB         │  Fresh Ubuntu VM #3
+│  needs: build       │
+│  if: push to main   │  ← Safety guard
+│  ✓ Deploy to Pages  │
+└─────────────────────┘
+  ↓
+LIVE SITE: https://you.github.io/repo/</pre>
+  </div>
+
+  <h4>Key Takeaways</h4>
+  <ol>
+    <li><strong>3 jobs = 3 fresh VMs</strong> — no shared files unless uploaded/downloaded</li>
+    <li><strong><code>needs:</code></strong> enforces order — test → build → deploy</li>
+    <li><strong><code>if:</code></strong> guards prevent deploy on PRs</li>
+    <li><strong><code>permissions:</code></strong> grant the workflow what it needs</li>
+    <li><strong>Each job re-checks out code</strong> because it starts on a clean VM</li>
+  </ol>
+
+  <!-- ========== COMMON MISTAKES ========== -->
+  <h3>⚠️ Common Mistakes</h3>
+
+  <table>
+    <tr><th>Mistake</th><th>Why It Fails</th><th>Fix</th></tr>
+    <tr><td>Wrong indentation</td><td>YAML is whitespace-sensitive</td><td>Use 2 spaces, never tabs</td></tr>
+    <tr><td>Missing <code>permissions:</code></td><td>Deploy can't authenticate</td><td>Add the permissions block</td></tr>
+    <tr><td>No <code>if:</code> guard on deploy</td><td>Deploys on PRs</td><td>Add <code>if: github.ref == 'refs/heads/main'</code></td></tr>
+    <tr><td>Forgetting <code>needs:</code></td><td>Jobs run in parallel</td><td>Add <code>needs: &lt;job-id&gt;</code></td></tr>
+    <tr><td>Using <code>@main</code> for actions</td><td>Actions can break unexpectedly</td><td>Pin to <code>@v4</code> major version</td></tr>
+    <tr><td>Missing checkout</td><td>No files on runner</td><td>Add <code>actions/checkout@v4</code></td></tr>
+    <tr><td>Not enabling Pages</td><td>Deploy fails with 404</td><td>Enable in Settings → Pages</td></tr>
+    <tr><td>Confusing <code>&gt;</code> and <code>&gt;&gt;</code></td><td>Overwrites vs appends</td><td><code>&gt;</code> for new file, <code>&gt;&gt;</code> for append</td></tr>
+  </table>
+
+  <!-- ========== YAML KEYWORD REFERENCE ========== -->
+  <h3>📖 YAML Keyword Reference</h3>
+
+  <table>
+    <tr><th>Keyword</th><th>Purpose</th><th>Example</th></tr>
+    <tr><td><code>name:</code></td><td>Display name</td><td><code>name: Test</code></td></tr>
+    <tr><td><code>on:</code></td><td>Trigger events</td><td><code>on: push</code></td></tr>
+    <tr><td><code>permissions:</code></td><td>What the workflow can do</td><td><code>pages: write</code></td></tr>
+    <tr><td><code>concurrency:</code></td><td>Prevent overlapping runs</td><td><code>group: "pages"</code></td></tr>
+    <tr><td><code>jobs:</code></td><td>List of jobs</td><td><code>jobs:</code></td></tr>
+    <tr><td><code>needs:</code></td><td>Job dependency</td><td><code>needs: test</code></td></tr>
+    <tr><td><code>if:</code></td><td>Conditional execution</td><td><code>if: github.ref == 'refs/heads/main'</code></td></tr>
+    <tr><td><code>runs-on:</code></td><td>Runner OS</td><td><code>runs-on: ubuntu-latest</code></td></tr>
+    <tr><td><code>steps:</code></td><td>List of tasks</td><td><code>steps:</code></td></tr>
+    <tr><td><code>uses:</code></td><td>Pre-built action</td><td><code>uses: actions/checkout@v4</code></td></tr>
+    <tr><td><code>run:</code></td><td>Shell command</td><td><code>run: echo "Hello"</code></td></tr>
+    <tr><td><code>with:</code></td><td>Pass inputs to action</td><td><code>with: python-version: '3.11'</code></td></tr>
+    <tr><td><code>id:</code></td><td>Reference name for step</td><td><code>id: deployment</code></td></tr>
+    <tr><td><code>environment:</code></td><td>Deployment target</td><td><code>name: github-pages</code></td></tr>
+  </table>
+
+  <!-- ========== TEACHING SCRIPT ========== -->
+  <h3>🎓 Teaching Script (10 Minutes)</h3>
+  
+  <p>Use this when you present the workflow to students:</p>
+
+  <div class="callout callout-info">
+    <span class="callout-title">Opening</span>
+    <em>"Let me show you a real production workflow. Every line has a purpose."</em>
+  </div>
+
+  <ol>
+    <li><strong>"The <code>name</code> shows up in the Actions tab."</strong> (5 sec)</li>
+    <li><strong>"The <code>on</code> block says WHEN to run — push to main, PRs, or manual."</strong> (30 sec)</li>
+    <li><strong>"The <code>permissions</code> block says what the workflow can do. Without <code>pages: write</code>, deploy fails."</strong> (30 sec)</li>
+    <li><strong>"Three jobs: test, build, deploy. Each runs on its own VM."</strong> (30 sec)</li>
+    <li><strong>"<code>needs: test</code> means 'wait for test to pass.' <code>if:</code> means 'only deploy on main, not PRs.'"</strong> (60 sec)</li>
+    <li><strong>"Each job must checkout code — fresh VM means no files until checkout."</strong> (30 sec)</li>
+    <li><strong>"Test job validates. Build job packages. Deploy job publishes."</strong> (60 sec)</li>
+    <li><strong>"The <code>${{ }}</code> syntax accesses GitHub's context — the commit SHA, the branch, the actor."</strong> (60 sec)</li>
+    <li><strong>"The <code>environment:</code> block ties into GitHub Pages, so the URL shows up in the UI."</strong> (30 sec)</li>
+    <li><strong>"And that's it — every push runs this whole pipeline automatically."</strong> (10 sec)</li>
+  </ol>
+
+  <p><strong>Total: ~6 minutes.</strong> Then live-demo the workflow running.</p>
+
+  <!-- ========== TL;DR ========== -->
+  <h3>🚀 TL;DR</h3>
+
+  <table>
+    <tr><th>Section</th><th>Purpose</th></tr>
+    <tr><td><code>name</code></td><td>Display name</td></tr>
+    <tr><td><code>on</code></td><td>When to trigger</td></tr>
+    <tr><td><code>permissions</code></td><td>What the workflow can do</td></tr>
+    <tr><td><code>concurrency</code></td><td>Prevent overlapping runs</td></tr>
+    <tr><td><code>jobs.test</code></td><td>Validate the code</td></tr>
+    <tr><td><code>jobs.build</code></td><td>Package for deploy</td></tr>
+    <tr><td><code>jobs.deploy</code></td><td>Publish to Pages</td></tr>
+    <tr><td><code>needs</code></td><td>Job dependency (order)</td></tr>
+    <tr><td><code>if</code></td><td>Conditional execution</td></tr>
+    <tr><td><code>uses</code></td><td>Run a pre-built action</td></tr>
+    <tr><td><code>run</code></td><td>Execute shell commands</td></tr>
+  </table>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- END WORKFLOW YAML EXPLAINED SECTION                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
        
+
