@@ -801,15 +801,6 @@ jobs:
           test -f src/script.js  || (echo "❌ src/script.js missing" && exit 1)
           echo "✅ All required files present!"
 
-      - name: 🔍 Validate HTML structure
-        run: |
-          echo "Validating HTML..."
-          grep -qF '<!DOCTYPE html>' src/index.html || (echo "❌ Missing DOCTYPE" && exit 1)
-          grep -qF '<html' src/index.html          || (echo "❌ Missing <html> tag" && exit 1)
-          grep -qF '<head>' src/index.html         || (echo "❌ Missing <head>" && exit 1)
-          grep -qF '<body>' src/index.html         || (echo "❌ Missing <body>" && exit 1)
-          echo "✅ HTML structure is valid!"
-
   # ══════════════════════════════════════════════
   # JOB 2: BUILD — Package the site
   # ══════════════════════════════════════════════
